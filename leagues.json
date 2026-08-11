@@ -1,0 +1,174 @@
+{
+  "English Premier League": {
+    "zh": "英超",
+    "tier": "ALLOWED"
+  },
+  "English Championship": {
+    "zh": "英冠",
+    "tier": "ALLOWED"
+  },
+  "English League One": {
+    "zh": "英甲",
+    "tier": "ALLOWED"
+  },
+  "Spanish La Liga": {
+    "zh": "西甲",
+    "tier": "ALLOWED"
+  },
+  "German Bundesliga": {
+    "zh": "德甲",
+    "tier": "ALLOWED"
+  },
+  "Italian Serie A": {
+    "zh": "意甲",
+    "tier": "ALLOWED"
+  },
+  "French Ligue 1": {
+    "zh": "法甲",
+    "tier": "ALLOWED"
+  },
+  "Japanese J1 League": {
+    "zh": "日職 (J1)",
+    "tier": "ALLOWED"
+  },
+  "Japanese J2 League": {
+    "zh": "日乙 (J2)",
+    "tier": "ALLOWED"
+  },
+  "South Korean K League 1": {
+    "zh": "韓職 (K1)",
+    "tier": "ALLOWED"
+  },
+  "Austrian Bundesliga": {
+    "zh": "奧甲",
+    "tier": "NO_UNDER"
+  },
+  "Norwegian Eliteserien": {
+    "zh": "挪超",
+    "tier": "NO_UNDER"
+  },
+  "Norwegian 1. Division": {
+    "zh": "挪甲",
+    "tier": "NO_UNDER"
+  },
+  "Swedish Allsvenskan": {
+    "zh": "瑞典超",
+    "tier": "NO_UNDER"
+  },
+  "Swedish Superettan": {
+    "zh": "瑞典甲",
+    "tier": "NO_UNDER"
+  },
+  "Danish Superliga": {
+    "zh": "丹超",
+    "tier": "NO_UNDER"
+  },
+  "Danish 1. Division": {
+    "zh": "丹甲",
+    "tier": "NO_UNDER"
+  },
+  "Finnish Veikkausliiga": {
+    "zh": "芬超",
+    "tier": "NO_UNDER"
+  },
+  "Icelandic Besta deild": {
+    "zh": "冰島超",
+    "tier": "NO_UNDER"
+  },
+  "Russian Premier League": {
+    "zh": "俄超",
+    "tier": "NO_UNDER"
+  },
+  "Ukrainian Premier League": {
+    "zh": "烏超",
+    "tier": "NO_UNDER"
+  },
+  "Polish Ekstraklasa": {
+    "zh": "波甲",
+    "tier": "NO_UNDER"
+  },
+  "Czech 1. Liga": {
+    "zh": "捷甲",
+    "tier": "NO_UNDER"
+  },
+  "Romanian Liga 1": {
+    "zh": "羅甲",
+    "tier": "NO_UNDER"
+  },
+  "Serbian SuperLiga": {
+    "zh": "塞超",
+    "tier": "NO_UNDER"
+  },
+  "Croatian HNL": {
+    "zh": "克甲",
+    "tier": "NO_UNDER"
+  },
+  "Hungarian NB I": {
+    "zh": "匈甲",
+    "tier": "NO_UNDER"
+  },
+  "Bulgarian First League": {
+    "zh": "保甲",
+    "tier": "NO_UNDER"
+  },
+  "Belarusian Premier League": {
+    "zh": "白俄超",
+    "tier": "NO_UNDER"
+  },
+  "Slovak Super Liga": {
+    "zh": "斯洛甲",
+    "tier": "NO_UNDER"
+  },
+  "Australian A-League": {
+    "zh": "澳職",
+    "tier": "NO_UNDER"
+  },
+  "Dutch Eredivisie": {
+    "zh": "荷甲",
+    "tier": "NO_UNDER"
+  },
+  "US MLS": {
+    "zh": "美職 (MLS)",
+    "tier": "NO_UNDER"
+  },
+  "Argentine Primera": {
+    "zh": "阿甲",
+    "tier": "BANNED"
+  },
+  "Brazilian Serie A": {
+    "zh": "巴甲",
+    "tier": "BANNED"
+  },
+  "Brazilian Serie B": {
+    "zh": "巴乙",
+    "tier": "BANNED"
+  },
+  "Colombian Primera A": {
+    "zh": "哥倫甲",
+    "tier": "BANNED"
+  },
+  "Chilean Primera": {
+    "zh": "智利甲",
+    "tier": "BANNED"
+  },
+  "Ecuadorian Liga Pro": {
+    "zh": "厄瓜甲",
+    "tier": "BANNED"
+  },
+  "Uruguayan Primera": {
+    "zh": "烏拉甲",
+    "tier": "BANNED"
+  },
+  "Paraguayan Primera": {
+    "zh": "巴拉甲",
+    "tier": "BANNED"
+  },
+  "Peruvian Liga 1": {
+    "zh": "秘魯甲",
+    "tier": "BANNED"
+  },
+  "Bolivian Primera": {
+    "zh": "玻利甲",
+    "tier": "BANNED"
+  }
+}

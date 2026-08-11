@@ -1,5 +1,9 @@
 # ⚽ Quantitative In-Play Corner Rate Engine
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://corner-rate-engine-6hsfqsoftshcjuqjswkpbe.streamlit.app/)
+
+> **Live Demo:** [Launch Corner Engine App](https://corner-rate-engine-6hsfqsoftshcjuqjswkpbe.streamlit.app/)
+
 A real-time quantitative sports trading and risk management engine designed to identify Expected Value (+EV) mispricings in live football corner markets. Powered by a Negative Binomial probability distribution model and an interactive Streamlit frontend.
 
 ---

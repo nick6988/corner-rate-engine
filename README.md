@@ -32,7 +32,7 @@ A real-time quantitative sports trading and risk management engine designed to i
 
 ### 1. Clone Repository
 ```bash
-git clone [https://github.com/nick6988/corner-rate-engine.git](https://github.com/nick6988/corner-rate-engine.git)
+git clone https://github.com/nick6988/corner-rate-engine.git
 cd corner-rate-engine
 ```
 

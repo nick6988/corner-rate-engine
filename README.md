@@ -1,4 +1,4 @@
-# ⚽ Quantitative In-Play Corner Rate Engine (+EV)
+# ⚽ Quantitative In-Play Corner Rate Engine
 
 A real-time quantitative sports trading and risk management engine designed to identify Expected Value (+EV) mispricings in live football corner markets. Powered by a Negative Binomial probability distribution model and an interactive Streamlit frontend.
 

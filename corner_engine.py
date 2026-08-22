@@ -131,23 +131,23 @@ class CornerEngine:
         expected_corners_so_far = self.adjusted_pre_line * (time_t / 90.0)
         return current_corners / expected_corners_so_far if expected_corners_so_far > 0 else 0.0
 
-    def get_rolling_momentum(self, time_t: float, current_corners: int, rolling_5m_corners: int | None = None) -> float:
-        """Calculate 5-minute rolling corner rate deviation (Excel cell B19)."""
+    def get_rolling_momentum(self, time_t: float, current_corners: int, rolling_10m_corners: int | None = None) -> float:
+        """Calculate 10-minute rolling corner rate deviation."""
         global_rate = self.get_global_momentum(time_t, current_corners)
-        if time_t < 5 or rolling_5m_corners is None:
+        if time_t < 10 or rolling_10m_corners is None:
             return global_rate
 
-        actual_5m_rate_per_min = rolling_5m_corners / 5.0
+        actual_10m_rate_per_min = rolling_10m_corners / 10.0
         expected_rate_per_min = self.adjusted_pre_line / 90.0
-        return actual_5m_rate_per_min / expected_rate_per_min if expected_rate_per_min > 0 else 0.0
+        return actual_10m_rate_per_min / expected_rate_per_min if expected_rate_per_min > 0 else 0.0
 
-    def get_composite_momentum(self, time_t: float, current_corners: int, rolling_5m_corners: int | None = None) -> float:
-        """Calculate combined composite momentum rate (Excel cell B20)."""
+    def get_composite_momentum(self, time_t: float, current_corners: int, rolling_10m_corners: int | None = None) -> float:
+        """Calculate combined composite momentum rate."""
         if time_t <= 0:
             return 0.0
 
         global_rate = self.get_global_momentum(time_t, current_corners)
-        rolling_rate = self.get_rolling_momentum(time_t, current_corners, rolling_5m_corners)
+        rolling_rate = self.get_rolling_momentum(time_t, current_corners, rolling_10m_corners)
         capped_rolling = min(1.50, rolling_rate)
 
         if time_t >= 55:
@@ -156,7 +156,7 @@ class CornerEngine:
             composite = (0.85 * global_rate) + (0.15 * capped_rolling)
 
         return round(composite, 4)
-
+    
     def calculate_remaining_lambda(
         self,
         time_t: float,
@@ -165,10 +165,9 @@ class CornerEngine:
         shots_on_target: int,
         home_goals: int,
         away_goals: int,
-        rolling_5m_corners: int | None = None,
+        rolling_10m_corners: int | None = None,
         red_card_status: str = "None"
     ) -> float:
-        r"""Calculate expected remaining corner intensity \lambda_rem (Excel cell B11)."""
         if time_t >= 90:
             return 0.0
 
@@ -176,7 +175,7 @@ class CornerEngine:
         shot_heat = self.get_shot_heat(time_t, total_shots, shots_on_target)
         score_mod = self.get_score_modifier(time_t, home_goals, away_goals)
         red_card_mod = self.get_red_card_modifier(red_card_status)
-        composite_momentum = self.get_composite_momentum(time_t, current_corners, rolling_5m_corners)
+        composite_momentum = self.get_composite_momentum(time_t, current_corners, rolling_10m_corners)
 
         elapsed_ratio = time_t / 90.0
         weighted_momentum = (elapsed_ratio * composite_momentum) + (1.0 - elapsed_ratio)
@@ -185,7 +184,7 @@ class CornerEngine:
             self.adjusted_pre_line * time_decay * weighted_momentum * score_mod * shot_heat * red_card_mod
         )
         return lambda_rem
-
+    
     def calculate_ev(
         self,
         live_line: float,
@@ -233,10 +232,10 @@ class CornerEngine:
         odds_over: float,
         ev_results: dict,
         league_tier: str = "ALLOWED",
-        rolling_5m_corners: int | None = None
+        rolling_10m_corners: int | None = None
     ) -> dict:
 
-        composite_m = self.get_composite_momentum(time_t, current_corners, rolling_5m_corners)
+        composite_m = self.get_composite_momentum(time_t, current_corners, rolling_10m_corners)
         under_buffer = live_line - current_corners
 
         # 1. Banned Leagues Check
@@ -250,7 +249,7 @@ class CornerEngine:
                 "under_checks": {}
             }
 
-        # 2. Under Signal & Checks
+        # 2. Under Signal & Checks (Keep Pre-Line Cap strictly <= 9.5)
         u_checks = {
             "Time Window (55-68m)": (55 <= time_t <= 68, f"{time_t:.0f}m"),
             "Pre-Line (<= 9.5)": (self.pre_match_line <= 9.5, f"{self.pre_match_line}"),
@@ -269,7 +268,8 @@ class CornerEngine:
                 if under_eligible else "💤 No Under Signal"
             )
 
-        # 3. Over Signal & Checks
+        # 3. Over Signal & Checks (Expanded Pre-Line Cap to <= 10.5)
+        required_over_momentum = 1.15 if time_t >= 55 else 1.35
         required_over_odds = 1.80 if time_t >= 70 else 1.65
         valid_time_window = (25 <= time_t <= 38) or (55 <= time_t <= 78)
         line_spike_break = (live_line >= 14.5) or ((live_line - self.pre_match_line) >= 5.0)
@@ -277,8 +277,8 @@ class CornerEngine:
 
         o_checks = {
             "Time Window (25-38 / 55-78m)": (valid_time_window, f"{time_t:.0f}m"),
-            "Pre-Line (<= 9.5)": (self.pre_match_line <= 9.5, f"{self.pre_match_line}"),
-            "Momentum P (>= 1.35)": (composite_m >= 1.35, f"{composite_m:.2f}"),
+            "Pre-Line (<= 10.5)": (self.pre_match_line <= 10.5, f"{self.pre_match_line}"),
+            f"Momentum P (>= {required_over_momentum:.2f})": (composite_m >= required_over_momentum, f"{composite_m:.2f}"),
             "Odds (>= 1.65/1.80)": (odds_over >= required_over_odds, f"{odds_over:.2f}"),
             "EV (> +15%)": (ev_results["ev_over"] > 0.15, f"{ev_results['ev_over']:+.1%}")
         }

@@ -137,7 +137,7 @@ with tab_live:
         with col_corn1:
             current_corners = st.number_input("Current Corner Count", min_value=0, max_value=30, value=5)
         with col_corn2:
-            rolling_5m = st.number_input("Corners (Last 5 Mins)", min_value=0, max_value=10, value=1)
+            rolling_10m = st.number_input("Corners (Last 10 Mins)", min_value=0, max_value=15, value=2)
 
         red_card_status = st.selectbox("Red Card Status", CornerEngine.VALID_RED_CARD_STATUSES, index=0)
 
@@ -156,7 +156,7 @@ with tab_live:
     shot_heat = engine.get_shot_heat(time_t, total_shots, shots_on_target)
     score_mod = engine.get_score_modifier(time_t, home_goals, away_goals)
     red_card_mod = engine.get_red_card_modifier(red_card_status)
-    composite_m = engine.get_composite_momentum(time_t, current_corners, rolling_5m)
+    composite_m = engine.get_composite_momentum(time_t, current_corners, rolling_10m)
 
     lambda_rem = engine.calculate_remaining_lambda(
         time_t=time_t,
@@ -165,7 +165,7 @@ with tab_live:
         shots_on_target=shots_on_target,
         home_goals=home_goals,
         away_goals=away_goals,
-        rolling_5m_corners=rolling_5m,
+        rolling_10m_corners=rolling_10m,
         red_card_status=red_card_status
     )
 
@@ -185,7 +185,7 @@ with tab_live:
         odds_over=odds_over,
         ev_results=ev_results,
         league_tier=league_tier,
-        rolling_5m_corners=rolling_5m
+        rolling_10m_corners=rolling_10m
     )
 
     # --- OUTPUT COLUMN ---
@@ -247,7 +247,9 @@ with tab_live:
 with tab_rules:
     st.markdown("""
     ### 📌 Hard In-Play Risk Control Rules
-    1. **Pre-Match Baseline Constraint**: Applicable strictly to matches with pre-match corner line **≤ 9.5**.
+    1. **Pre-Match Baseline Constraint**: Applicable strictly to matches with pre-match corner line.
+       - **Under Trades**: Only allowed if pre-match line ≤ 9.5.
+       - **Over Trades**: Only allowed if pre-match line ≤ 10.5.
     2. **Observation Windows**:
        - **Sniper Under**: T ∈ [55, 68] minutes.
        - **Sniper Over**: T ∈ [25, 38] minutes or T ∈ [55, 78] minutes.
@@ -258,7 +260,7 @@ with tab_rules:
        - Odds ≥ 1.65 and Expected Value (+EV) > +15%.
     4. **Over Entry Thresholds**:
        - Time Window: 25–38 Mins or 55–78 Mins (Odds ≥ 1.80 required after T ≥ 70).
-       - Composite Momentum (P) ≥ 1.35.
+       - Composite Momentum (P) ≥ 1.35 for T < 55, ≥ 1.15 for T ≥ 55.
        - Expected Value (+EV) > +15%.
     5. **Circuit Breaker Fuse**: Blocks Over trades if live line ≥ 14.5 or live line exceeds pre-match line by ≥ 5.0 corners (waived only during T ∈ [55, 68] outburst windows with P ≥ 1.50).
     6. **League Filter Rules**:

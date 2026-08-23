@@ -1,4 +1,5 @@
 import numpy as np
+import math
 from scipy.stats import nbinom
 from league_filter import get_league_tier, LeagueCategorizer
 
@@ -198,7 +199,7 @@ class CornerEngine:
         Calculate win probabilities and Expected Value (+EV) using Negative Binomial Distribution.
         (Corresponds to Excel cells B12:B15).
         """
-        corners_needed_to_hit_line = int(live_line - current_corners)
+        corners_needed_to_hit_line = math.ceil(live_line - current_corners)
 
         if current_corners >= live_line:
             return {

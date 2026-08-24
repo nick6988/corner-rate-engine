@@ -158,6 +158,12 @@ class CornerEngine:
 
         return round(composite, 4)
     
+    def get_dynamic_r(self, time_t: float, composite_m: float) -> int:
+        """Calculates dynamic dispersion parameter r for Negative Binomial distribution."""
+        if time_t >= 70.0 or composite_m >= 1.15:
+            return 8
+        return 15
+    
     def calculate_remaining_lambda(
         self,
         time_t: float,
@@ -180,9 +186,10 @@ class CornerEngine:
 
         elapsed_ratio = time_t / 90.0
         weighted_momentum = (elapsed_ratio * composite_momentum) + (1.0 - elapsed_ratio)
+        compound_coeff = max(0.55, min(1.35, weighted_momentum * shot_heat))
 
         lambda_rem = (
-            self.adjusted_pre_line * time_decay * weighted_momentum * score_mod * shot_heat * red_card_mod
+            self.adjusted_pre_line * time_decay * compound_coeff * score_mod * red_card_mod
         )
         return lambda_rem
     
@@ -193,7 +200,9 @@ class CornerEngine:
         lambda_rem: float,
         odds_under: float,
         odds_over: float,
-        r_dispersion: int = 12
+        time_t: float,
+        composite_m: float,
+        r_dispersion: int | None = None
     ) -> dict:
         r"""
         Calculate win probabilities and Expected Value (+EV) using Negative Binomial Distribution.
@@ -209,6 +218,7 @@ class CornerEngine:
                 "ev_over": (1.0 * odds_over) - 1.0
             }
 
+        r_dispersion = self.get_dynamic_r(time_t, composite_m)
         p_param = r_dispersion / (r_dispersion + lambda_rem) if (r_dispersion + lambda_rem) > 0 else 1.0
 
         prob_under = nbinom.cdf(corners_needed_to_hit_line - 1, r_dispersion, p_param) if corners_needed_to_hit_line > 0 else 0.0

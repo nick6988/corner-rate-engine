@@ -174,7 +174,9 @@ with tab_live:
         current_corners=current_corners,
         lambda_rem=lambda_rem,
         odds_under=odds_under,
-        odds_over=odds_over
+        odds_over=odds_over,
+        time_t=time_t,
+        composite_m=composite_m
     )
 
     signals = engine.get_signal_diagnostics(

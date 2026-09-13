@@ -251,18 +251,18 @@ with tab_rules:
     ### 📌 Hard In-Play Risk Control Rules
     1. **Pre-Match Baseline Constraint**: Applicable strictly to matches with pre-match corner line.
        - **Under Trades**: Only allowed if pre-match line ≤ 9.5.
-       - **Over Trades**: Only allowed if pre-match line ≤ 10.5.
+       - **Over Trades**: Only allowed if pre-match line ≥ 9.5.
     2. **Observation Windows**:
        - **Sniper Under**: T ∈ [55, 68] minutes.
-       - **Sniper Over**: T ∈ [25, 38] minutes or T ∈ [55, 78] minutes.
+       - **Sniper Over**: T ∈ [55, 78] minutes.
     3. **Under Entry Thresholds**:
        - Time Window: 55–68 Mins.
        - Composite Momentum (P) ≤ 0.50.
        - Under Buffer (Live Line - Current Corners) ≥ 2.5.
        - Odds ≥ 1.65 and Expected Value (+EV) > +15%.
     4. **Over Entry Thresholds**:
-       - Time Window: 25–38 Mins or 55–78 Mins (Odds ≥ 1.80 required after T ≥ 70).
-       - Composite Momentum (P) ≥ 1.35 for T < 55, ≥ 1.15 for T ≥ 55.
+       - Time Window: 55–78 Mins (Odds ≥ 1.80 required after T ≥ 70).
+       - Composite Momentum (P) ≥ 1.15.
        - Expected Value (+EV) > +15%.
     5. **Circuit Breaker Fuse**: Blocks Over trades if live line ≥ 14.5 or live line exceeds pre-match line by ≥ 5.0 corners (waived only during T ∈ [55, 68] outburst windows with P ≥ 1.50).
     6. **League Filter Rules**:

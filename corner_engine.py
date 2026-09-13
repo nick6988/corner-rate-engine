@@ -279,19 +279,19 @@ class CornerEngine:
                 if under_eligible else "💤 No Under Signal"
             )
 
-        # 3. Over Signal & Checks (Expanded Pre-Line Cap to <= 10.5)
-        required_over_momentum = 1.15 if time_t >= 55 else 1.35
+        # 3. Over Signal & Checks 
+        required_over_momentum = 1.15
         required_over_odds = 1.80 if time_t >= 70 else 1.65
-        valid_time_window = (25 <= time_t <= 38) or (55 <= time_t <= 78)
+        valid_time_window = 55 <= time_t <= 78
         line_spike_break = (live_line >= 14.5) or ((live_line - self.pre_match_line) >= 5.0)
         is_outburst_window = (55 <= time_t <= 68) and (composite_m >= 1.50)
 
         o_checks = {
-            "Time Window (25-38 / 55-78m)": (valid_time_window, f"{time_t:.0f}m"),
-            "Pre-Line (<= 10.5)": (self.pre_match_line <= 10.5, f"{self.pre_match_line}"),
-            f"Momentum P (>= {required_over_momentum:.2f})": (composite_m >= required_over_momentum, f"{composite_m:.2f}"),
-            "Odds (>= 1.65/1.80)": (odds_over >= required_over_odds, f"{odds_over:.2f}"),
-            "EV (> +15%)": (ev_results["ev_over"] > 0.15, f"{ev_results['ev_over']:+.1%}")
+        "Time Window (55-78m)": (valid_time_window, f"{time_t:.0f}m"),
+        "Pre-Line (9.5 - 11.5)": (9.5 <= self.pre_match_line <= 11.5, f"{self.pre_match_line}"),
+        f"Momentum P (>= {required_over_momentum:.2f})": (composite_m >= required_over_momentum, f"{composite_m:.2f}"),
+        "Odds (>= 1.65/1.80)": (odds_over >= required_over_odds, f"{odds_over:.2f}"),
+        "EV (> +15%)": (ev_results["ev_over"] > 0.15, f"{ev_results['ev_over']:+.1%}")
         }
 
         if line_spike_break and not is_outburst_window:

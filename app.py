@@ -127,12 +127,34 @@ with tab_live:
         with col_score2:
             away_goals = st.number_input("Away Goals", min_value=0, max_value=15, value=1)
 
-        col_shot1, col_shot2 = st.columns(2)
-        with col_shot1:
-            total_shots = st.number_input("Total Shots (Both Teams)", min_value=0, max_value=60, value=15)
-        with col_shot2:
-            shots_on_target = st.number_input("Shots on Target", min_value=0, max_value=30, value=5)
+    # --- 2. 射門與進攻數據輸入區 (動態條件渲染) ---
+        with st.container(border=True):
+            use_advanced = st.toggle("🚀 啟用高級遙測 (Opta/Flashscore Full Stats)", value=False)
+            if use_advanced:
+                st.caption("🔍 **高級模式**：請輸入四項微觀指標（已自動剔除 Total Shots 浪射噪聲）")
+                col_adv1, col_adv2 = st.columns(2)
+                with col_adv1:
+                    crosses = st.number_input("Crosses (傳中)", min_value=0, max_value=80, value=20)
+                    touches_in_box = st.number_input("Touches in Box (禁區觸球)", min_value=0, max_value=100, value=25)
+                with col_adv2:
+                    blocked_shots = st.number_input("Blocked Shots (被封堵)", min_value=0, max_value=30, value=5)
+                    shots_on_target = st.number_input("Shots on Target (射正)", min_value=0, max_value=30, value=5)
+                
+                # 高級模式下，Total Shots 自動歸零/隱藏，不干擾介面
+                total_shots = None
 
+            else:
+                st.caption("⚡ **基礎模式**：適用於數據缺失賽事 (僅需基本射門數據)")
+                col_shot1, col_shot2 = st.columns(2)
+                with col_shot1:
+                    total_shots = st.number_input("Total Shots (Both Teams)", min_value=0, max_value=60, value=15)
+                with col_shot2:
+                    shots_on_target = st.number_input("Shots on Target (射正)", min_value=0, max_value=total_shots, value=min(5, total_shots))
+                
+                # 基礎模式下，高級指標清零
+                crosses, touches_in_box, blocked_shots = 0, 0, 0
+
+        # --- 3. 角球與紅牌數據 ---
         col_corn1, col_corn2 = st.columns(2)
         with col_corn1:
             current_corners = st.number_input("Current Corner Count", min_value=0, max_value=30, value=5)
@@ -153,22 +175,34 @@ with tab_live:
             odds_over = st.number_input("Over Odds", min_value=1.01, max_value=10.0, value=1.95, step=0.05)
 
     # --- CALCULATIONS ---
-    shot_heat = engine.get_shot_heat(time_t, total_shots, shots_on_target)
+    
+    # 1. 動態計算唯一權威的 shot_heat (Override 發生點)
+    if use_advanced:
+        shot_heat = engine.get_advanced_corner_heat(
+            time_t=time_t,
+            crosses=crosses,
+            touches_in_box=touches_in_box,
+            blocked_shots=blocked_shots,
+            shots_on_target=shots_on_target,
+            total_shots=total_shots
+        )
+    else:
+        shot_heat = engine.get_shot_heat(time_t, total_shots, shots_on_target)
+
     score_mod = engine.get_score_modifier(time_t, home_goals, away_goals)
     red_card_mod = engine.get_red_card_modifier(red_card_status)
     composite_m = engine.get_composite_momentum(time_t, current_corners, rolling_10m)
 
+    # 2. 將算好的 shot_heat 直接傳入，確保 lambda_rem 與 UI 顯示完全一致
     lambda_rem = engine.calculate_remaining_lambda(
         time_t=time_t,
         current_corners=current_corners,
-        total_shots=total_shots,
-        shots_on_target=shots_on_target,
+        shot_heat=shot_heat,  # 🔥 確保傳進去的是 override 後的熱度數值
         home_goals=home_goals,
         away_goals=away_goals,
         rolling_10m_corners=rolling_10m,
         red_card_status=red_card_status
     )
-
     ev_results = engine.calculate_ev(
         live_line=live_line,
         current_corners=current_corners,
@@ -194,9 +228,10 @@ with tab_live:
     with col_output:
         st.subheader("🎯 Quantitative Engine Outputs")
 
-        # Metric Row 1: Key Factors
+        # Metric Row 1: Key Factors (動態標籤)
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Shot Heat", f"{shot_heat:.2f}")
+        heat_label = "Shot Heat (Adv)" if use_advanced else "Shot Heat (Basic)"
+        m1.metric(heat_label, f"{shot_heat:.2f}")
         m2.metric("Score Mod", f"{score_mod:.2f}")
         m3.metric("Momentum (P)", f"{composite_m:.2f}")
         m4.metric("λ (Remaining)", f"{lambda_rem:.2f}")

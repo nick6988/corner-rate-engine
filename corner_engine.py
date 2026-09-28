@@ -27,6 +27,10 @@ class CornerEngine:
     BASELINE_TOTAL_SHOTS = 22.5
     BASELINE_SHOTS_ON_TARGET = 7.5
 
+    # SofaScore Native Statistics Baselines (90-minute combined match average)
+    BASELINE_SHOTS_INSIDE_BOX = 11.0  # 禁區內射門 (高危險圍攻/動態解圍)
+    BASELINE_BLOCKED_SHOTS = 8.0      # 被封堵射門 (直接折射出底線)
+
     def __init__(
         self,
         pre_match_line: float,
@@ -52,9 +56,9 @@ class CornerEngine:
         else:
             self.adjusted_pre_line = self.pre_match_line
 
-    def get_shot_heat(self, time_t: float, total_shots: int, shots_on_target: int) -> float:
-        """Calculate match attacking intensity / shot heat modifier (Excel cell B7)."""
-        if time_t <= 0:
+    def get_shot_heat(self, time_t: float, total_shots: int | None, shots_on_target: int) -> float:
+        """Calculate match attacking intensity / shot heat modifier."""
+        if time_t <= 0 or total_shots is None:
             return 1.0
 
         expected_total_shots = self.BASELINE_TOTAL_SHOTS * (time_t / 90.0)
@@ -163,45 +167,36 @@ class CornerEngine:
         if time_t >= 70.0 or composite_m >= 1.15:
             return 8
         return 15
-    
-# 新增高級基準值 (基於英超 90 分鐘雙方合計平均)
-    BASELINE_CROSSES = 32.0
-    BASELINE_BOX_TOUCHES = 45.0
-    BASELINE_BLOCKED_SHOTS = 8.0
 
     def get_advanced_corner_heat(
         self,
         time_t: float,
-        crosses: int,            # 傳中：被頭球解圍出底線 (權重 40%)
-        touches_in_box: int,     # 禁區觸球：混亂解圍/高壓圍攻 (權重 30%)
-        blocked_shots: int,      # 折射/封堵射門：直接偏出底線 (權重 20%)
-        shots_on_target: int,    # 射正：門將撲出底線 (權重 10%)
-        total_shots: int | None = None  # 選配：僅做數據校驗，不參與物理算式
+        shots_inside_box: int,  # SofaScore 禁區內射門 (權重 50%)
+        blocked_shots: int,     # SofaScore 被封堵射門 (權重 30%)
+        shots_on_target: int,   # SofaScore 射正 (權重 20%)
+        total_shots: int | None = None
     ) -> float:
+        """Calculate advanced match attacking intensity using SofaScore/Opta 3-param metrics."""
         if time_t <= 0:
             return 1.0
 
-        # Data Validation (選配：防止輸入數據邏輯相悖)
         if total_shots is not None and total_shots > 0 and (shots_on_target + blocked_shots) > total_shots:
-            # 修正異常數據噪聲
             shots_on_target = min(shots_on_target, total_shots)
             blocked_shots = min(blocked_shots, total_shots - shots_on_target)
 
         time_ratio = time_t / 90.0
-        line_scale = self.adjusted_pre_line / 9.5  # 賽前盤口動態校正
+        line_scale = self.adjusted_pre_line / 9.5
 
-        exp_crosses = (self.BASELINE_CROSSES * line_scale) * time_ratio
-        exp_box_touches = (self.BASELINE_BOX_TOUCHES * line_scale) * time_ratio
+        exp_inside_box = (self.BASELINE_SHOTS_INSIDE_BOX * line_scale) * time_ratio
         exp_blocked = (self.BASELINE_BLOCKED_SHOTS * line_scale) * time_ratio
         exp_sot = (self.BASELINE_SHOTS_ON_TARGET * line_scale) * time_ratio
 
-        r_cross = crosses / exp_crosses if exp_crosses > 0 else 0.0
-        r_box = touches_in_box / exp_box_touches if exp_box_touches > 0 else 0.0
+        r_inside_box = shots_inside_box / exp_inside_box if exp_inside_box > 0 else 0.0
         r_block = blocked_shots / exp_blocked if exp_blocked > 0 else 0.0
         r_sot = shots_on_target / exp_sot if exp_sot > 0 else 0.0
 
-        # 精準物理加權（排除射偏浪射噪聲）
-        raw_heat = (0.40 * r_cross) + (0.30 * r_box) + (0.20 * r_block) + (0.10 * r_sot)
+        # Refined physical weighting (SofaScore statistics alignment)
+        raw_heat = (0.50 * r_inside_box) + (0.30 * r_block) + (0.20 * r_sot)
         
         return min(1.40, max(0.70, round(raw_heat, 2)))
 

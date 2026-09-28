@@ -127,32 +127,30 @@ with tab_live:
         with col_score2:
             away_goals = st.number_input("Away Goals", min_value=0, max_value=15, value=1)
 
-    # --- 2. 射門與進攻數據輸入區 (動態條件渲染) ---
+        # --- 2. 射門與進攻數據輸入區 (SofaScore / Flashscore 雙模態輸入) ---
         with st.container(border=True):
-            use_advanced = st.toggle("🚀 啟用高級遙測 (Opta/Flashscore Full Stats)", value=False)
+            use_advanced = st.toggle("🚀 啟用高級遙測 (SofaScore Native Stats)", value=False)
             if use_advanced:
-                st.caption("🔍 **高級模式**：請輸入四項微觀指標（已自動剔除 Total Shots 浪射噪聲）")
-                col_adv1, col_adv2 = st.columns(2)
+                st.caption("🔍 **SofaScore 高級模式**：直接讀取 Statistics 頁面 3 項射門數據 (已剔除浪射噪聲)")
+                col_adv1, col_adv2, col_adv3 = st.columns(3)
                 with col_adv1:
-                    crosses = st.number_input("Crosses (傳中)", min_value=0, max_value=80, value=20)
-                    touches_in_box = st.number_input("Touches in Box (禁區觸球)", min_value=0, max_value=100, value=25)
+                    shots_inside_box = st.number_input("Shots Inside Box (禁區內)", min_value=0, max_value=60, value=8)
                 with col_adv2:
-                    blocked_shots = st.number_input("Blocked Shots (被封堵)", min_value=0, max_value=30, value=5)
+                    blocked_shots = st.number_input("Blocked Shots (被封堵)", min_value=0, max_value=30, value=4)
+                with col_adv3:
                     shots_on_target = st.number_input("Shots on Target (射正)", min_value=0, max_value=30, value=5)
                 
-                # 高級模式下，Total Shots 自動歸零/隱藏，不干擾介面
                 total_shots = None
 
             else:
-                st.caption("⚡ **基礎模式**：適用於數據缺失賽事 (僅需基本射門數據)")
+                st.caption("⚡ **Flashscore 基礎模式**：適用於僅顯示基本射門之賽事 (極速 2 秒輸入)")
                 col_shot1, col_shot2 = st.columns(2)
                 with col_shot1:
-                    total_shots = st.number_input("Total Shots (Both Teams)", min_value=0, max_value=60, value=15)
+                    total_shots = st.number_input("Total Shots (雙方合計)", min_value=0, max_value=60, value=15)
                 with col_shot2:
                     shots_on_target = st.number_input("Shots on Target (射正)", min_value=0, max_value=total_shots, value=min(5, total_shots))
                 
-                # 基礎模式下，高級指標清零
-                crosses, touches_in_box, blocked_shots = 0, 0, 0
+                shots_inside_box, blocked_shots = 0, 0
 
         # --- 3. 角球與紅牌數據 ---
         col_corn1, col_corn2 = st.columns(2)
@@ -180,11 +178,9 @@ with tab_live:
     if use_advanced:
         shot_heat = engine.get_advanced_corner_heat(
             time_t=time_t,
-            crosses=crosses,
-            touches_in_box=touches_in_box,
+            shots_inside_box=shots_inside_box,
             blocked_shots=blocked_shots,
-            shots_on_target=shots_on_target,
-            total_shots=total_shots
+            shots_on_target=shots_on_target
         )
     else:
         shot_heat = engine.get_shot_heat(time_t, total_shots, shots_on_target)

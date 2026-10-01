@@ -16,6 +16,14 @@ class GoalEngine:
     BASELINE_TEAM_SHOTS = 11.25
     BASELINE_TEAM_DA = 45.0
 
+    # -------------------------------------------------------------------------
+    # v2.1 Dynamic Flow Constants (Empirical Calibration Placeholders)
+    # -------------------------------------------------------------------------
+    WEIGHT_FLOW_XG = 0.70      # TODO: Empirically calibrate via 100+ match log
+    WEIGHT_FLOW_XGOT = 0.30    # TODO: Empirically calibrate via 100+ match log
+    BASELINE_XGOT_RATIO = 0.65 # TODO: Calibrate per league (EPL vs secondary leagues)
+    DAMPENING_FACTOR = 0.25    # Reserved for v2.2 pricing integration
+
     def __init__(self, pre_match_goal_line: float, asian_handicap: float = 0.0):
         if pre_match_goal_line <= 0:
             raise ValueError("Pre-match goal line must be greater than 0.")
@@ -267,7 +275,69 @@ class GoalEngine:
             "ev_under": round(float(ev_under), 4),
             "ev_over": round(float(ev_over), 4)
         }
+    
+    def get_flow_pressure_index(
+        self,
+        time_t: float,
+        home_xg_15m: float,
+        away_xg_15m: float,
+        home_xgot_15m: float,
+        away_xgot_15m: float,
+        heat_h: float,
+        heat_a: float
+    ) -> dict[str, float]:
+        """
+        Calculates 15-Minute Flow Pressure Index & Quality Ratio.
+        PURE DIAGNOSTIC METRIC (v2.1): Strictly logged for observation; does NOT alter lambda_rem.
+        """
+        if time_t < 15:
+            return {
+                "mom_h": 1.00, "mom_a": 1.00, "mom_total": 1.00,
+                "quality_h": 0.0, "quality_a": 0.0,
+                "eff_mom_h": 1.00, "eff_mom_a": 1.00
+            }
 
+        # 1. Baseline Expectations per 15m Window
+        exp_xg_15m_h = max(0.05, (self.lambda_h_pre * (15.0 / 90.0)) * heat_h)
+        exp_xg_15m_a = max(0.05, (self.lambda_a_pre * (15.0 / 90.0)) * heat_a)
+        
+        exp_xgot_15m_h = exp_xg_15m_h * self.BASELINE_XGOT_RATIO
+        exp_xgot_15m_a = exp_xg_15m_a * self.BASELINE_XGOT_RATIO
+
+        # 2. Acceleration Rates
+        rate_xg_h = home_xg_15m / exp_xg_15m_h
+        rate_xg_a = away_xg_15m / exp_xg_15m_a
+        
+        rate_xgot_h = home_xgot_15m / exp_xgot_15m_h
+        rate_xgot_a = away_xgot_15m / exp_xgot_15m_a
+
+        # 3. Weighted Momentum (Configurable Constants)
+        raw_mom_h = (self.WEIGHT_FLOW_XG * rate_xg_h) + (self.WEIGHT_FLOW_XGOT * rate_xgot_h)
+        raw_mom_a = (self.WEIGHT_FLOW_XG * rate_xg_a) + (self.WEIGHT_FLOW_XGOT * rate_xgot_a)
+
+        # 4. Clamped Momentum [0.85, 1.20]
+        mom_h = min(1.20, max(0.85, raw_mom_h))
+        mom_a = min(1.20, max(0.85, raw_mom_a))
+        mom_total = round((mom_h + mom_a) / 2.0, 2)
+
+        # 5. Micro Quality Ratio (Execution vs Volume)
+        quality_h = round(home_xgot_15m / home_xg_15m, 3) if home_xg_15m > 0 else 0.0
+        quality_a = round(away_xgot_15m / away_xg_15m, 3) if away_xg_15m > 0 else 0.0
+
+        # 6. Theoretical Dampened Multiplier for v2.2 Evaluation
+        eff_mom_h = round(1.0 + self.DAMPENING_FACTOR * (mom_h - 1.0), 3)
+        eff_mom_a = round(1.0 + self.DAMPENING_FACTOR * (mom_a - 1.0), 3)
+
+        return {
+            "mom_h": round(mom_h, 2),
+            "mom_a": round(mom_a, 2),
+            "mom_total": mom_total,
+            "quality_h": quality_h,
+            "quality_a": quality_a,
+            "eff_mom_h": eff_mom_h,
+            "eff_mom_a": eff_mom_a
+        }
+    
     def get_signal_diagnostics(
         self,
         time_t: float,

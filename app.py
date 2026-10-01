@@ -138,7 +138,24 @@ with tab_live:
         # --- 2. 射門與進攻數據輸入區 (SofaScore / Flashscore 雙模態輸入) ---
         with st.container(border=True):
             use_advanced = st.toggle("🚀 啟用高級遙測 (SofaScore xG/xGOT & Box Stats)", value=True)
-            
+            # Initialize every parameter as 0 to avoid uninitialized variable errors
+            home_xg = 0.0
+            away_xg = 0.0
+            home_xgot = 0.0
+            away_xgot = 0.0
+            home_sot = 0
+            away_sot = 0
+            shots_inside_box = 0
+            blocked_shots = 0
+            home_xg_15m = 0.0
+            away_xg_15m = 0.0
+            home_xgot_15m = 0.0
+            away_xgot_15m = 0.0
+            home_shots = 0
+            away_shots = 0
+            home_da = 0
+            away_da = 0
+
             if use_advanced:
                 st.caption("🔍 **Advanced Mode**: Enter Independent xG, xGOT, and Box Score Metrics for Home & Away Teams")
                 col_h1, col_h2, col_h3 = st.columns(3)
@@ -164,8 +181,16 @@ with tab_live:
                 with col_sot2:
                     blocked_shots = st.number_input("Blocked Shots", min_value=0, max_value=30, value=4)
 
-                # 安全賦予 Basic 模式預設值 (避免 NameError)
-                home_shots, away_shots, home_da, away_da = 0, 0, 0, 0
+                st.caption("⏱️ **15-Min Flow Telemetry (Volume & Execution)**")
+                col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+                with col_f1:
+                    home_xg_15m = st.number_input("Home xG (Last 15m)", min_value=0.0, max_value=5.0, value=0.20, step=0.05)
+                with col_f2:
+                    home_xgot_15m = st.number_input("Home xGOT (Last 15m)", min_value=0.0, max_value=5.0, value=0.15, step=0.05)
+                with col_f3:
+                    away_xg_15m = st.number_input("Away xG (Last 15m)", min_value=0.0, max_value=5.0, value=0.10, step=0.05)
+                with col_f4:
+                    away_xgot_15m = st.number_input("Away xGOT (Last 15m)", min_value=0.0, max_value=5.0, value=0.08, step=0.05)
 
             else:
                 st.caption("⚡ **Basic Mode**: Enter Total Shots, Shots on Target (SoT), and Dangerous Attacks for Home & Away Teams")
@@ -184,10 +209,6 @@ with tab_live:
                     away_sot = st.number_input("Away SoT", min_value=0, max_value=30, value=2)
                 with col_b6:
                     away_da = st.number_input("Away Dangerous Attacks", min_value=0, max_value=200, value=50)
-
-                # 安全賦予 Advanced 模式預設值 (避免 NameError)
-                home_xg, away_xg, home_xgot, away_xgot = 0.0, 0.0, 0.0, 0.0
-                shots_inside_box, blocked_shots = 0, 0
 
         # --- 3. 角球與紅牌數據 ---
         col_corn1, col_corn2 = st.columns(2)
@@ -301,6 +322,13 @@ with tab_live:
         league_tier=league_tier
     )
 
+    flow_diag = goal_eng.get_flow_pressure_index(
+        time_t=time_t,
+        home_xg_15m=home_xg_15m, away_xg_15m=away_xg_15m,
+        home_xgot_15m=home_xgot_15m, away_xgot_15m=away_xgot_15m,
+        heat_h=heat_h, heat_a=heat_a
+    )
+
     # -------------------------------------------------------------------------
     #                            OUTPUT DASHBOARD
     # -------------------------------------------------------------------------
@@ -364,6 +392,17 @@ with tab_live:
             if fault_a:
                 st.warning("⚠️ **Away Conversion Fault**: High xG but very low xGOT, shot heat penalized by 0.75x.")
 
+            st.markdown("##### 🔬 15m Flow Pressure Index (Volume 70% + Execution 30%)")
+            fp1, fp2, fp3, fp4 = st.columns(4)
+            fp1.metric("Home 15m Mom", f"{flow_diag['mom_h']:.2f}x", f"Quality: {flow_diag['quality_h']:.2f}")
+            fp2.metric("Away 15m Mom", f"{flow_diag['mom_a']:.2f}x", f"Quality: {flow_diag['quality_a']:.2f}")
+            fp3.metric("Match Pressure Index", f"{flow_diag['mom_total']:.2f}x")
+            fp4.metric("Dampened λ Multiplier", f"{((flow_diag['eff_mom_h'] + flow_diag['eff_mom_a'])/2.0):.3f}x", 
+                       help="Theoretical multiplier if applied to lambda_rem (Dampened by 0.25x)")
+
+            st.caption("ℹ️ *Diagnostic Only: This index measures current 15m match acceleration and is logged for observation without altering current +EV pricing.*")
+            st.divider()
+            
             # 2. 主客獨立熱度與剩餘期望值 Metric
             g1, g2, g3, g4 = st.columns(4)
             g1.metric("Home Heat", f"{heat_h:.2f}")

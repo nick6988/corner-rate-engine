@@ -19,9 +19,9 @@ class CornerEngine:
 
     VALID_RED_CARD_STATUSES = [
         "None",
-        "Underdog_Red",
-        "Favorite_Red",
-        "Balanced_Red"
+        "Home_Red",
+        "Away_Red",
+        "Both_Red"
     ]
 
     BASELINE_TOTAL_SHOTS = 22.5
@@ -120,14 +120,33 @@ class CornerEngine:
                 return 1.00
 
     def get_red_card_modifier(self, red_card_status: str = "None") -> float:
-        """Calculate red card tactical impact modifier (Excel cell B22)."""
-        modifiers = {
-            "Underdog_Red": 1.20,
-            "Favorite_Red": 0.85,
-            "Balanced_Red": 0.90,
-            "None": 1.00
-        }
-        return modifiers.get(red_card_status, 1.00)
+        """Calculate red card tactical impact modifier dynamically based on AH and team status."""
+        if red_card_status == "None":
+            return 1.00
+        elif red_card_status == "Both_Red":
+            return 0.90  # 兩隊各一張紅牌或相抵
+
+        # 嚴格對齊模型風控門檻：|AH| >= 0.75 定義為強隊/弱隊
+        home_is_fav = self.asian_handicap <= -0.75
+        away_is_fav = self.asian_handicap >= 0.75
+
+        if red_card_status == "Home_Red":
+            if home_is_fav:
+                return 0.85   # 強隊(主)領紅牌：進攻核心缺失，角球創造力下降 (0.85x)
+            elif away_is_fav:
+                return 1.20   # 弱隊(主)領紅牌：強隊(客)展開高壓圍攻，解圍/折射頻次暴增 (1.20x)
+            else:
+                return 0.90   # 淺盤/平手：比賽節奏被打碎，角球微降 (0.90x)
+
+        elif red_card_status == "Away_Red":
+            if away_is_fav:
+                return 0.85   # 強隊(客)領紅牌：進攻核心缺失，角球創造力下降 (0.85x)
+            elif home_is_fav:
+                return 1.20   # 弱隊(客)領紅牌：強隊(主)展開高壓圍攻，解圍/折射頻次暴增 (1.20x)
+            else:
+                return 0.90   # 淺盤/平手：比賽節奏被打碎，角球微降 (0.90x)
+
+        return 1.00
 
     def get_global_momentum(self, time_t: float, current_corners: int) -> float:
         """Calculate global corner pace deviation rate P (Excel cell B9)."""

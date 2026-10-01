@@ -404,13 +404,12 @@ with tab_live:
             st.divider()
             
             # 2. 主客獨立熱度與剩餘期望值 Metric
-            g1, g2, g3, g4 = st.columns(4)
+            g1, g2, g3, g4, g5 = st.columns(5)
             g1.metric("Home Heat", f"{heat_h:.2f}")
             g2.metric("Away Heat", f"{heat_a:.2f}")
             g3.metric("λ Home Rem", f"{goal_lambdas['lambda_home_rem']:.2f}")
             g4.metric("λ Away Rem", f"{goal_lambdas['lambda_away_rem']:.2f}")
-
-            st.info(f"💡 **Total Remaining Expected Goals (λ Rem)**: `{goal_lambdas['lambda_rem']:.2f}`")
+            g5.metric("λ Total Rem", f"{goal_lambdas['lambda_rem']:.2f}")
 
             st.divider()
 

@@ -7,7 +7,7 @@ from league_filter import LeagueCategorizer
 # 1. Page Configuration & Custom CSS
 # -----------------------------------------------------------------------------
 st.set_page_config(
-    page_title="In-Play Corner Rate Engine (+EV)",
+    page_title="In-Play Goal and Corner Rate Engine (+EV)",
     page_icon="⚽",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -114,7 +114,6 @@ goal_eng = GoalEngine(
     asian_handicap=asian_handicap
 )
 
-
 # -----------------------------------------------------------------------------
 # 3. Main Interface: Live Match Input & Output Dashboard
 # -----------------------------------------------------------------------------
@@ -155,6 +154,11 @@ with tab_live:
             away_shots = 0
             home_da = 0
             away_da = 0
+            home_xg_15m = 0.0
+            away_xg_15m = 0.0
+            home_xgot_15m = 0.0
+            away_xgot_15m = 0.0
+            use_flow = False
 
             if use_advanced:
                 st.caption("🔍 **Advanced Mode**: Enter Independent xG, xGOT, and Box Score Metrics for Home & Away Teams")
@@ -181,16 +185,19 @@ with tab_live:
                 with col_sot2:
                     blocked_shots = st.number_input("Blocked Shots", min_value=0, max_value=30, value=4)
 
-                st.caption("⏱️ **15-Min Flow Telemetry (Volume & Execution)**")
-                col_f1, col_f2, col_f3, col_f4 = st.columns(4)
-                with col_f1:
-                    home_xg_15m = st.number_input("Home xG (Last 15m)", min_value=0.0, max_value=5.0, value=0.20, step=0.05)
-                with col_f2:
-                    home_xgot_15m = st.number_input("Home xGOT (Last 15m)", min_value=0.0, max_value=5.0, value=0.15, step=0.05)
-                with col_f3:
-                    away_xg_15m = st.number_input("Away xG (Last 15m)", min_value=0.0, max_value=5.0, value=0.10, step=0.05)
-                with col_f4:
-                    away_xgot_15m = st.number_input("Away xGOT (Last 15m)", min_value=0.0, max_value=5.0, value=0.08, step=0.05)
+                use_flow = st.toggle("Enable 15-Min Flow Telemetry (xG & xGOT)", value=False)
+
+                if use_flow:
+                    col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+                    with col_f1:
+                        home_xg_15m = st.number_input("Home xG (Last 15m)", min_value=0.0, max_value=5.0, value=0.20, step=0.05)
+                    with col_f2:
+                        home_xgot_15m = st.number_input("Home xGOT (Last 15m)", min_value=0.0, max_value=5.0, value=0.15, step=0.05)
+                    with col_f3:
+                        away_xg_15m = st.number_input("Away xG (Last 15m)", min_value=0.0, max_value=5.0, value=0.10, step=0.05)
+                    with col_f4:
+                        away_xgot_15m = st.number_input("Away xGOT (Last 15m)", min_value=0.0, max_value=5.0, value=0.08, step=0.05)
+
 
             else:
                 st.caption("⚡ **Basic Mode**: Enter Total Shots, Shots on Target (SoT), and Dangerous Attacks for Home & Away Teams")
@@ -392,16 +399,17 @@ with tab_live:
             if fault_a:
                 st.warning("⚠️ **Away Conversion Fault**: High xG but very low xGOT, shot heat penalized by 0.75x.")
 
-            st.markdown("##### 🔬 15m Flow Pressure Index (Volume 70% + Execution 30%)")
-            fp1, fp2, fp3, fp4 = st.columns(4)
-            fp1.metric("Home 15m Mom", f"{flow_diag['mom_h']:.2f}x", f"Quality: {flow_diag['quality_h']:.2f}")
-            fp2.metric("Away 15m Mom", f"{flow_diag['mom_a']:.2f}x", f"Quality: {flow_diag['quality_a']:.2f}")
-            fp3.metric("Match Pressure Index", f"{flow_diag['mom_total']:.2f}x")
-            fp4.metric("Dampened λ Multiplier", f"{((flow_diag['eff_mom_h'] + flow_diag['eff_mom_a'])/2.0):.3f}x", 
-                       help="Theoretical multiplier if applied to lambda_rem (Dampened by 0.25x)")
+            if use_flow:
+                st.markdown("##### 🔬 15m Flow Pressure Index (Volume 70% + Execution 30%)")
+                fp1, fp2, fp3, fp4 = st.columns(4)
+                fp1.metric("Home 15m Mom", f"{flow_diag['mom_h']:.2f}x", f"Quality: {flow_diag['quality_h']:.2f}")
+                fp2.metric("Away 15m Mom", f"{flow_diag['mom_a']:.2f}x", f"Quality: {flow_diag['quality_a']:.2f}")
+                fp3.metric("Match Pressure Index", f"{flow_diag['mom_total']:.2f}x")
+                fp4.metric("Dampened λ Multiplier", f"{((flow_diag['eff_mom_h'] + flow_diag['eff_mom_a'])/2.0):.3f}x", 
+                        help="Theoretical multiplier if applied to lambda_rem (Dampened by 0.25x)")
 
-            st.caption("ℹ️ *Diagnostic Only: This index measures current 15m match acceleration and is logged for observation without altering current +EV pricing.*")
-            st.divider()
+                st.caption("ℹ️ *Diagnostic Only: This index measures current 15m match acceleration and is logged for observation without altering current +EV pricing.*")
+                st.divider()
             
             # 2. 主客獨立熱度與剩餘期望值 Metric
             g1, g2, g3, g4, g5 = st.columns(5)

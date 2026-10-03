@@ -100,9 +100,13 @@ class GoalEngine:
             raw_heat_h = (0.50 * r_sot_h) + (0.30 * r_s_h) + (0.20 * r_da_h)
             raw_heat_a = (0.50 * r_sot_a) + (0.30 * r_s_a) + (0.20 * r_da_a)
 
+
         # Apply bounds without premature rounding
-        bounded_h = min(1.50, max(0.50, raw_heat_h))
-        bounded_a = min(1.50, max(0.50, raw_heat_a))
+        # 放寬極端熱度上限
+        max_heat_limit = 1.85 if (use_advanced and (home_xg >= 2.50 or away_xg >= 2.50)) else 1.50
+
+        bounded_h = min(max_heat_limit, max(0.50, raw_heat_h))
+        bounded_a = min(max_heat_limit, max(0.50, raw_heat_a))
 
         # Bayesian Compound Weighting with elapsed time
         compound_h = (1.0 - elapsed_ratio) * 1.0 + elapsed_ratio * bounded_h
@@ -111,14 +115,21 @@ class GoalEngine:
         return round(compound_h, 4), round(compound_a, 4), fault_h, fault_a
 
     def get_score_modifiers(
-        self, time_t: float, home_goals: int, away_goals: int
+        self, time_t: float, home_goals: int, away_goals: int, heat_h: float = 1.0, heat_a: float = 1.0
     ) -> tuple[float, float]: # return mod_home, mod_away
         """Calculates distinct tactical scoreline modifiers for Home and Away (mod_home, mod_away)."""
         goal_diff = home_goals - away_goals  # >0: Home leads, <0: Away leads
 
         # 1. Blowout (Lead >= 3 goals) -> Both teams drop tempo
         if abs(goal_diff) >= 3:
-            return 0.65, 0.65
+            if goal_diff >= 3:  # 主隊大勝
+                mod_h = 0.85 if heat_h >= 1.30 else 0.65
+                mod_a = 0.50  # 客隊士氣崩潰
+                return mod_h, mod_a
+            else:  # 客隊大勝 (如 0-4)
+                mod_h = 0.50  # 主隊士氣崩潰
+                mod_a = 0.85 if heat_a >= 1.30 else 0.65
+                return mod_h, mod_a
 
         # 2. Home Favorite Trailing (AH <= -0.75 and Home is behind)
         if self.asian_handicap <= -0.75 and goal_diff <= -1:
@@ -189,7 +200,7 @@ class GoalEngine:
             return {"lambda_rem": 0.0, "lambda_home_rem": 0.0, "lambda_away_rem": 0.0}
 
         time_decay = (max(0.0, 90.0 - time_t) / 90.0) ** 0.88
-        score_mod_h, score_mod_a = self.get_score_modifiers(time_t, home_goals, away_goals)
+        score_mod_h, score_mod_a = self.get_score_modifiers(time_t, home_goals, away_goals, heat_h, heat_a)
         red_mod_h, red_mod_a = self.get_red_card_modifiers(red_card_status)
 
         # Fully Independent Team Lambdas

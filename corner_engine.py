@@ -247,10 +247,12 @@ class CornerEngine:
 
         elapsed_ratio = time_t / 90.0
         weighted_momentum = (elapsed_ratio * composite_momentum) + (1.0 - elapsed_ratio)
-        compound_coeff = max(0.55, min(1.40, weighted_momentum * shot_heat))
+
+        raw_total_mod = weighted_momentum * shot_heat * score_mod * red_card_mod
+        total_mod = max(0.50, min(1.65, raw_total_mod))
 
         lambda_rem = (
-            self.adjusted_pre_line * time_decay * compound_coeff * score_mod * red_card_mod
+            self.adjusted_pre_line * time_decay * total_mod
         )
         return lambda_rem
     

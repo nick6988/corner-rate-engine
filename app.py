@@ -256,38 +256,38 @@ with tab_live:
                 value=max(2.5, float(current_total_goals) + 0.5),
                 step=0.25,
             )
+        with col_g2:
             goal_odds_under = st.number_input("Goal Under Odds", min_value=1.01, max_value=10.0, value=1.85, step=0.05)
         with col_g3:
             goal_odds_over = st.number_input("Goal Over Odds", min_value=1.01, max_value=10.0, value=1.95, step=0.05)
 
         # 2) Extended Markets: Team Totals & Next Goal (Live)
-        with st.expander("➕ Live Extended Goal Markets)", expanded=True):
-            st.markdown("##### 🎯 Team Totals")
-            col_th1, col_th2, col_th3 = st.columns(3)
-            with col_th1:
-                live_home_line = st.number_input("Home Line (主隊大小)", min_value=0.0, max_value=10.0, value=float(home_goals) + 0.5, step=0.25)
-            with col_th2:
-                odds_home_under = st.number_input("Home Under Odds", min_value=1.01, max_value=10.0, value=1.80, step=0.05)
-            with col_th3:
-                odds_home_over = st.number_input("Home Over Odds", min_value=1.01, max_value=10.0, value=2.00, step=0.05)
+        st.markdown("##### 🎯 Team Totals")
+        col_th1, col_th2, col_th3 = st.columns(3)
+        with col_th1:
+            live_home_line = st.number_input("Home Line", min_value=0.0, max_value=10.0, value=float(home_goals) + 0.5, step=0.25)
+        with col_th2:
+            odds_home_under = st.number_input("Home Under Odds", min_value=1.01, max_value=10.0, value=1.80, step=0.05)
+        with col_th3:
+            odds_home_over = st.number_input("Home Over Odds", min_value=1.01, max_value=10.0, value=2.00, step=0.05)
 
-            col_ta1, col_ta2, col_ta3 = st.columns(3)
-            with col_ta1:
-                live_away_line = st.number_input("Away Line (客隊大小)", min_value=0.0, max_value=10.0, value=float(away_goals) + 0.5, step=0.25)
-            with col_ta2:
-                odds_away_under = st.number_input("Away Under Odds", min_value=1.01, max_value=10.0, value=1.80, step=0.05)
-            with col_ta3:
-                odds_away_over = st.number_input("Away Over Odds", min_value=1.01, max_value=10.0, value=2.00, step=0.05)
+        col_ta1, col_ta2, col_ta3 = st.columns(3)
+        with col_ta1:
+            live_away_line = st.number_input("Away Line", min_value=0.0, max_value=10.0, value=float(away_goals) + 0.5, step=0.25)
+        with col_ta2:
+            odds_away_under = st.number_input("Away Under Odds", min_value=1.01, max_value=10.0, value=1.80, step=0.05)
+        with col_ta3:
+            odds_away_over = st.number_input("Away Over Odds", min_value=1.01, max_value=10.0, value=2.00, step=0.05)
 
-            st.divider()
-            st.markdown("##### ⚡ Next Goal / Team to Score Next")
-            col_ng1, col_ng2, col_ng3 = st.columns(3)
-            with col_ng1:
-                odds_next_home = st.number_input("Next Goal: Home Odds", min_value=1.01, max_value=20.0, value=2.20, step=0.05)
-            with col_ng2:
-                odds_next_away = st.number_input("Next Goal: Away Odds", min_value=1.01, max_value=20.0, value=2.50, step=0.05)
-            with col_ng3:
-                odds_no_goal = st.number_input("Next Goal: No Goal Odds", min_value=1.01, max_value=20.0, value=3.40, step=0.05)
+        st.divider()
+        st.markdown("##### ⚡ Next Goal / Team to Score Next")
+        col_ng1, col_ng2, col_ng3 = st.columns(3)
+        with col_ng1:
+            odds_next_home = st.number_input("Next Goal: Home Odds", min_value=1.01, max_value=20.0, value=2.20, step=0.05)
+        with col_ng2:
+            odds_next_away = st.number_input("Next Goal: Away Odds", min_value=1.01, max_value=20.0, value=2.50, step=0.05)
+        with col_ng3:
+            odds_no_goal = st.number_input("Next Goal: No Goal Odds", min_value=1.01, max_value=20.0, value=3.40, step=0.05)
 
     # -------------------------------------------------------------------------
     # CALCULATIONS PIPELINE

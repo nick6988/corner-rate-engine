@@ -72,8 +72,20 @@ class GoalEngine:
             exp_xg_h = self.lambda_h_pre * time_ratio
             exp_xg_a = self.lambda_a_pre * time_ratio
 
-            raw_heat_h = (0.60 * (home_xg / exp_xg_h) + 0.40 * (home_xgot / exp_xg_h)) if exp_xg_h > 0 else 1.0
-            raw_heat_a = (0.60 * (away_xg / exp_xg_a) + 0.40 * (away_xgot / exp_xg_a)) if exp_xg_a > 0 else 1.0
+            # 獨立計算 xGOT 的期望基準 (套用 0.65 執行折率)
+            exp_xgot_h = exp_xg_h * self.BASELINE_XGOT_RATIO
+            exp_xgot_a = exp_xg_a * self.BASELINE_XGOT_RATIO
+
+            # 各自計算達成率 (Rate)
+            rate_xg_h = (home_xg / exp_xg_h) if exp_xg_h > 0 else 1.0
+            rate_xgot_h = (home_xgot / exp_xgot_h) if exp_xgot_h > 0 else 1.0
+
+            rate_xg_a = (away_xg / exp_xg_a) if exp_xg_a > 0 else 1.0
+            rate_xgot_a = (away_xgot / exp_xgot_a) if exp_xgot_a > 0 else 1.0
+
+            # 體積加權 60% + 質量加權 40%
+            raw_heat_h = (0.60 * rate_xg_h) + (0.40 * rate_xgot_h)
+            raw_heat_a = (0.60 * rate_xg_a) + (0.40 * rate_xgot_a)
 
             # Independent Conversion Fault Gates (High xG, broken xGOT)
             if home_xg >= 0.80 and (home_xgot / home_xg if home_xg > 0 else 1.0) < 0.35:
@@ -274,6 +286,8 @@ class GoalEngine:
                 eff_prob_under += p_k * 0.5
             elif diff == 0.25:
                 payoff_under = -0.5                   # Lose Half
+            elif diff == 0.0:
+                payoff_under = 0                      # Push (No Win/Loss)
             else:
                 payoff_under = -1.0                   # Lose Full
 

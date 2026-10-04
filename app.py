@@ -285,9 +285,10 @@ with tab_live:
         with col_ng1:
             odds_next_home = st.number_input("Next Goal: Home Odds", min_value=1.01, max_value=20.0, value=2.20, step=0.05)
         with col_ng2:
-            odds_next_away = st.number_input("Next Goal: Away Odds", min_value=1.01, max_value=20.0, value=2.50, step=0.05)
-        with col_ng3:
             odds_no_goal = st.number_input("Next Goal: No Goal Odds", min_value=1.01, max_value=20.0, value=3.40, step=0.05)
+        with col_ng3:
+            odds_next_away = st.number_input("Next Goal: Away Odds", min_value=1.01, max_value=20.0, value=2.50, step=0.05)
+
 
     # -------------------------------------------------------------------------
     # CALCULATIONS PIPELINE
@@ -579,8 +580,8 @@ with tab_live:
                 st.caption("競合 Poisson 過程 (Competing Poisson Process)：計算下一球勝率、+EV 與風險訊號")
                 ng1, ng2, ng3 = st.columns(3)
                 ng1.metric("🏠 Next Goal: Home", f"{next_goal_ev['prob_home']:.1%}", f"EV: {next_goal_ev['ev_home']:+.1%}")
-                ng2.metric("✈️️ Next Goal: Away", f"{next_goal_ev['prob_away']:.1%}", f"EV: {next_goal_ev['ev_away']:+.1%}")
-                ng3.metric("🛑 No Further Goal", f"{next_goal_ev['prob_no_goal']:.1%}", f"EV: {next_goal_ev['ev_no_goal']:+.1%}")
+                ng2.metric("🛑 No Further Goal", f"{next_goal_ev['prob_no_goal']:.1%}", f"EV: {next_goal_ev['ev_no_goal']:+.1%}")
+                ng3.metric("✈️️ Next Goal: Away", f"{next_goal_ev['prob_away']:.1%}", f"EV: {next_goal_ev['ev_away']:+.1%}")
 
                 st.divider()
 

@@ -1,7 +1,8 @@
 import json
 import os
 
-FILE_PATH = "leagues.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FILE_PATH = os.path.join(BASE_DIR, "leagues.json")
 
 class LeagueCategorizer:
     """Manages dynamic reading, writing, and tier evaluation for football leagues."""

@@ -231,7 +231,13 @@ with tab_live:
 
         col_m1, col_m2, col_m3 = st.columns(3)
         with col_m1:
-            live_line = st.number_input("Live Corner Line", min_value=float(current_corners), max_value=25.0, value=max(7.5, float(current_corners) + 0.5), step=0.5)
+            live_line = st.number_input(
+                "Live Corner Line",
+                min_value=0.0,
+                max_value=25.0,
+                value=max(7.5, float(current_corners) + 0.5),
+                step=0.5,
+            )
         with col_m2:
             odds_under = st.number_input("Corner Under Odds", min_value=1.01, max_value=10.0, value=1.85, step=0.05)
         with col_m3:
@@ -243,8 +249,13 @@ with tab_live:
         current_total_goals = home_goals + away_goals
 
         with col_g1:
-            live_goal_line = st.number_input("Live Goal Line", min_value=float(current_total_goals), max_value=15.0, value=max(2.5, float(current_total_goals) + 0.5), step=0.25)
-        with col_g2:
+            live_goal_line = st.number_input(
+                "Live Goal Line",
+                min_value=0.0,
+                max_value=15.0,
+                value=max(2.5, float(current_total_goals) + 0.5),
+                step=0.25,
+            )
             goal_odds_under = st.number_input("Goal Under Odds", min_value=1.01, max_value=10.0, value=1.85, step=0.05)
         with col_g3:
             goal_odds_over = st.number_input("Goal Over Odds", min_value=1.01, max_value=10.0, value=1.95, step=0.05)
@@ -577,7 +588,7 @@ with tab_live:
                 for sig in [next_goal_sig["home_signal"], next_goal_sig["away_signal"], next_goal_sig["no_goal_signal"]]:
                     if "🔥" in sig:
                         st.markdown(f'<div class="signal-box-green"><p class="signal-title">{sig}</p></div>', unsafe_allow_html=True)
-                    elif "⛔" in sig or "⚠️" in sig:
+                    elif any(char in sig for char in ["⛔", "⚠️", "⚠"]):
                         st.markdown(f'<div class="signal-box-red"><p class="signal-title">{sig}</p></div>', unsafe_allow_html=True)
                     else:
                         st.markdown(f'<div class="signal-box-gray"><p class="signal-title">{sig}</p></div>', unsafe_allow_html=True)         

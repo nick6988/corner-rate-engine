@@ -586,7 +586,7 @@ with tab_live:
                 st.divider()
 
                 # 完整渲染所有狀態卡片 (含綠色 🔥、紅色 ⛔、黃色 ⚠️、灰色 💤)
-                for sig in [next_goal_sig["home_signal"], next_goal_sig["away_signal"], next_goal_sig["no_goal_signal"]]:
+                for sig in [next_goal_sig["home_signal"], next_goal_sig["no_goal_signal"], next_goal_sig["away_signal"]]:
                     if "🔥" in sig:
                         st.markdown(f'<div class="signal-box-green"><p class="signal-title">{sig}</p></div>', unsafe_allow_html=True)
                     elif any(char in sig for char in ["⛔", "⚠️", "⚠"]):

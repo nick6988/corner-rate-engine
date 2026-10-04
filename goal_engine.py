@@ -274,6 +274,8 @@ class GoalEngine:
                 eff_prob_over += p_k * 0.5
             elif diff == -0.25:
                 payoff_over = -0.5                    # Lose Half
+            elif diff == 0.0:
+                payoff_over = 0                       # Push (No Win/Loss)
             else:
                 payoff_over = -1.0                    # Lose Full
 
@@ -299,6 +301,45 @@ class GoalEngine:
             "prob_over_eff": round(float(eff_prob_over), 4),
             "ev_under": round(float(ev_under), 4),
             "ev_over": round(float(ev_over), 4)
+        }
+
+    def calculate_next_goal_ev(
+        self,
+        lambda_home_rem: float,
+        lambda_away_rem: float,
+        odds_next_home: float,
+        odds_next_away: float,
+        odds_no_goal: float
+    ) -> dict[str, float]:
+        """Calculates Next Goal / Team to Score Next probabilities and +EV."""
+        lambda_rem = lambda_home_rem + lambda_away_rem
+
+        if lambda_rem <= 0:
+            return {
+                "prob_home": 0.0, "ev_home": -1.0,
+                "prob_away": 0.0, "ev_away": -1.0,
+                "prob_no_goal": 1.0, "ev_no_goal": odds_no_goal - 1.0
+            }
+
+        # 1. 計算三方真實勝率
+        prob_no_goal = math.exp(-lambda_rem)
+        prob_has_goal = 1.0 - prob_no_goal
+
+        prob_home = prob_has_goal * (lambda_home_rem / lambda_rem)
+        prob_away = prob_has_goal * (lambda_away_rem / lambda_rem)
+
+        # 2. 計算 Expected Value (+EV)
+        ev_home = (prob_home * odds_next_home) - 1.0
+        ev_away = (prob_away * odds_next_away) - 1.0
+        ev_no_goal = (prob_no_goal * odds_no_goal) - 1.0
+
+        return {
+            "prob_home": round(prob_home, 4),
+            "ev_home": round(ev_home, 4),
+            "prob_away": round(prob_away, 4),
+            "ev_away": round(ev_away, 4),
+            "prob_no_goal": round(prob_no_goal, 4),
+            "ev_no_goal": round(ev_no_goal, 4)
         }
     
     def get_flow_pressure_index(
@@ -422,6 +463,90 @@ class GoalEngine:
             "over_checks": o_checks,
             "under_checks": u_checks
         }
+
+    def get_team_signal_diagnostics(
+        self,
+        time_t: float,
+        live_team_line: float,
+        current_team_goals: int,
+        odds_under: float,
+        odds_over: float,
+        ev_results: dict,
+        team_fault: bool = False,
+        league_tier: str = "ALLOWED"
+    ) -> dict[str, str]:
+        """評估單邊大小球 (Team Totals) 訊號與風控條款"""
+        if league_tier == "BANNED":
+            return {"under_signal": "⛔ BANNED LEAGUE", "over_signal": "⛔ BANNED LEAGUE"}
+
+        buffer = live_team_line - current_team_goals
+
+        # 1. Team Under
+        u_eligible = (
+            50 <= time_t <= 75 and
+            buffer >= 1.0 and
+            odds_under >= 1.65 and
+            ev_results["ev_under"] > 0.15 and
+            league_tier != "NO_UNDER"
+        )
+        if league_tier == "NO_UNDER":
+            under_signal = "⛔ NO-UNDER LEAGUE"
+        else:
+            under_signal = f"🔥 TEAM SNIPER UNDER (+EV: {ev_results['ev_under']:+.1%})" if u_eligible else "💤 No Team Under Signal"
+
+        # 2. Team Over (若該隊射術故障則熔斷)
+        req_odds = 1.80 if time_t >= 70 else 1.65
+        if team_fault:
+            over_signal = "⚠️ CONVERSION FAULT: Over Signal Blocked"
+        else:
+            o_eligible = (
+                45 <= time_t <= 80 and
+                odds_over >= req_odds and
+                ev_results["ev_over"] > 0.15
+            )
+            over_signal = f"🔥 TEAM SNIPER OVER (+EV: {ev_results['ev_over']:+.1%})" if o_eligible else "💤 No Team Over Signal"
+
+        return {"under_signal": under_signal, "over_signal": over_signal}
+
+    def get_next_goal_signal_diagnostics(
+        self,
+        time_t: float,
+        odds_next_home: float,
+        odds_next_away: float,
+        odds_no_goal: float,
+        ev_results: dict,
+        fault_h: bool = False,
+        fault_a: bool = False,
+        league_tier: str = "ALLOWED"
+    ) -> dict[str, str]:
+        """評估下一隊入球 (Next Goal) 訊號與風控條款"""
+        if league_tier == "BANNED":
+            return {"home_signal": "⛔ BANNED LEAGUE", "away_signal": "⛔ BANNED LEAGUE", "no_goal_signal": "⛔ BANNED LEAGUE"}
+
+        req_odds = 1.80 if time_t >= 70 else 1.65
+
+        # 1. Next Goal Home (補齊 odds_next_home >= req_odds 檢查)
+        if fault_h:
+            h_sig = "⚠️️ HOME CONVERSION FAULT: Signal Blocked"
+        else:
+            h_elig = (45 <= time_t <= 85) and (odds_next_home >= req_odds) and (ev_results["ev_home"] > 0.15)
+            h_sig = f"🔥 NEXT GOAL: HOME (+EV: {ev_results['ev_home']:+.1%})" if h_elig else "💤 No Next Goal Home Signal"
+
+        # 2. Next Goal Away (補齊 odds_next_away >= req_odds 檢查)
+        if fault_a:
+            a_sig = "⚠️️ AWAY CONVERSION FAULT: Signal Blocked"
+        else:
+            a_elig = (45 <= time_t <= 85) and (odds_next_away >= req_odds) and (ev_results["ev_away"] > 0.15)
+            a_sig = f"🔥 NEXT GOAL: AWAY (+EV: {ev_results['ev_away']:+.1%})" if a_elig else "💤 No Next Goal Away Signal"
+
+        # 3. No Goal (等同細球，NO_UNDER 聯賽強制禁止，補齊 odds_no_goal 檢查)
+        if league_tier == "NO_UNDER":
+            ng_sig = "⛔ NO-UNDER LEAGUE: No Goal Trade Blocked"
+        else:
+            ng_elig = (65 <= time_t <= 88) and (odds_no_goal >= req_odds) and (ev_results["ev_no_goal"] > 0.15)
+            ng_sig = f"🔥 NO FURTHER GOAL (+EV: {ev_results['ev_no_goal']:+.1%})" if ng_elig else "💤 No No-Goal Signal"
+
+        return {"home_signal": h_sig, "away_signal": a_sig, "no_goal_signal": ng_sig}
 '''
 g = GoalEngine(3.0, 0.5)
 print(g.lambda_h_pre)  # Example usage

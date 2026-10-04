@@ -249,6 +249,35 @@ with tab_live:
         with col_g3:
             goal_odds_over = st.number_input("Goal Over Odds", min_value=1.01, max_value=10.0, value=1.95, step=0.05)
 
+        # 2) Extended Markets: Team Totals & Next Goal (Live)
+        with st.expander("➕ Live Extended Goal Markets)", expanded=True):
+            st.markdown("##### 🎯 Team Totals")
+            col_th1, col_th2, col_th3 = st.columns(3)
+            with col_th1:
+                live_home_line = st.number_input("Home Line (主隊大小)", min_value=0.0, max_value=10.0, value=float(home_goals) + 0.5, step=0.25)
+            with col_th2:
+                odds_home_under = st.number_input("Home Under Odds", min_value=1.01, max_value=10.0, value=1.80, step=0.05)
+            with col_th3:
+                odds_home_over = st.number_input("Home Over Odds", min_value=1.01, max_value=10.0, value=2.00, step=0.05)
+
+            col_ta1, col_ta2, col_ta3 = st.columns(3)
+            with col_ta1:
+                live_away_line = st.number_input("Away Line (客隊大小)", min_value=0.0, max_value=10.0, value=float(away_goals) + 0.5, step=0.25)
+            with col_ta2:
+                odds_away_under = st.number_input("Away Under Odds", min_value=1.01, max_value=10.0, value=1.80, step=0.05)
+            with col_ta3:
+                odds_away_over = st.number_input("Away Over Odds", min_value=1.01, max_value=10.0, value=2.00, step=0.05)
+
+            st.divider()
+            st.markdown("##### ⚡ Next Goal / Team to Score Next")
+            col_ng1, col_ng2, col_ng3 = st.columns(3)
+            with col_ng1:
+                odds_next_home = st.number_input("Next Goal: Home Odds", min_value=1.01, max_value=20.0, value=2.20, step=0.05)
+            with col_ng2:
+                odds_next_away = st.number_input("Next Goal: Away Odds", min_value=1.01, max_value=20.0, value=2.50, step=0.05)
+            with col_ng3:
+                odds_no_goal = st.number_input("Next Goal: No Goal Odds", min_value=1.01, max_value=20.0, value=3.40, step=0.05)
+
     # -------------------------------------------------------------------------
     # CALCULATIONS PIPELINE
     # -------------------------------------------------------------------------
@@ -329,6 +358,54 @@ with tab_live:
         league_tier=league_tier
     )
 
+    home_team_ev = goal_eng.calculate_ev(
+        live_goal_line=live_home_line,
+        current_goals=home_goals,
+        lambda_rem=goal_lambdas["lambda_home_rem"],
+        odds_under=odds_home_under,
+        odds_over=odds_home_over
+    )
+
+    home_team_sig = goal_eng.get_team_signal_diagnostics(
+        time_t=time_t, live_team_line=live_home_line, current_team_goals=home_goals,
+        odds_under=odds_home_under, odds_over=odds_home_over, ev_results=home_team_ev,
+        team_fault=fault_h, league_tier=league_tier
+    )
+
+    away_team_ev = goal_eng.calculate_ev(
+        live_goal_line=live_away_line,
+        current_goals=away_goals,
+        lambda_rem=goal_lambdas["lambda_away_rem"],
+        odds_under=odds_away_under,
+        odds_over=odds_away_over
+    )
+
+    away_team_sig = goal_eng.get_team_signal_diagnostics(
+        time_t=time_t, live_team_line=live_away_line, current_team_goals=away_goals,
+        odds_under=odds_away_under, odds_over=odds_away_over, ev_results=away_team_ev,
+        team_fault=fault_a, league_tier=league_tier
+    )
+
+    next_goal_ev = goal_eng.calculate_next_goal_ev(
+        lambda_home_rem=goal_lambdas["lambda_home_rem"],
+        lambda_away_rem=goal_lambdas["lambda_away_rem"],
+        odds_next_home=odds_next_home,
+        odds_next_away=odds_next_away,
+        odds_no_goal=odds_no_goal
+    )
+
+    next_goal_sig = goal_eng.get_next_goal_signal_diagnostics(
+        time_t=time_t,
+        odds_next_home=odds_next_home,
+        odds_next_away=odds_next_away,
+        odds_no_goal=odds_no_goal,
+        ev_results=next_goal_ev,
+        fault_h=fault_h,
+        fault_a=fault_a,
+        league_tier=league_tier
+    )
+    
+
     flow_diag = goal_eng.get_flow_pressure_index(
         time_t=time_t,
         home_xg_15m=home_xg_15m, away_xg_15m=away_xg_15m,
@@ -390,8 +467,7 @@ with tab_live:
                     for criterion, (passed, val) in corner_signals["over_checks"].items():
                         icon = "✅" if passed else "❌"
                         st.write(f"{icon} **{criterion}**: `{val}`")
-
-        # --- GOAL ENGINE TAB ---
+                # --- GOAL ENGINE TAB ---
         with tab_out_goal:
             # 1. 終結能力故障警告 (Conversion Fault Risk Control)
             if fault_h:
@@ -405,13 +481,10 @@ with tab_live:
                 fp1.metric("Home 15m Mom", f"{flow_diag['mom_h']:.2f}x", f"Quality: {flow_diag['quality_h']:.2f}")
                 fp2.metric("Away 15m Mom", f"{flow_diag['mom_a']:.2f}x", f"Quality: {flow_diag['quality_a']:.2f}")
                 fp3.metric("Match Pressure Index", f"{flow_diag['mom_total']:.2f}x")
-                fp4.metric("Dampened λ Multiplier", f"{((flow_diag['eff_mom_h'] + flow_diag['eff_mom_a'])/2.0):.3f}x", 
-                        help="Theoretical multiplier if applied to lambda_rem (Dampened by 0.25x)")
-
-                st.caption("ℹ️ *Diagnostic Only: This index measures current 15m match acceleration and is logged for observation without altering current +EV pricing.*")
+                fp4.metric("Dampened λ Multiplier", f"{((flow_diag['eff_mom_h'] + flow_diag['eff_mom_a'])/2.0):.3f}x")
                 st.divider()
-            
-            # 2. 主客獨立熱度與剩餘期望值 Metric
+
+            # 2. 獨立熱度與剩餘期望值
             g1, g2, g3, g4, g5 = st.columns(5)
             g1.metric("Home Heat", f"{heat_h:.2f}")
             g2.metric("Away Heat", f"{heat_a:.2f}")
@@ -421,47 +494,93 @@ with tab_live:
 
             st.divider()
 
-            # 3. 大小球勝率與 +EV
-            prob_u_eff = goal_ev.get("prob_under_eff", goal_ev.get("prob_under", 0.0))
-            prob_o_eff = goal_ev.get("prob_over_eff", goal_ev.get("prob_over", 0.0))
+            # 3. 三大入球盤口分析 Dashboard (使用子頁籤)
+            tab_g_total, tab_g_team, tab_g_next = st.tabs([
+                "📊 全場大小球 (Match Totals)",
+                "🎯 單邊大小球 (Team Totals)",
+                "⚡ 下一隊入球 (Next Goal)"
+            ])
 
-            gp1, gp2, gp3, gp4 = st.columns(4)
-            gp1.metric("Under Eff Prob", f"{prob_u_eff:.1%}")
-            gp2.metric("Under EV", f"{goal_ev['ev_under']:+.1%}")
-            gp3.metric("Over Eff Prob", f"{prob_o_eff:.1%}")
-            gp4.metric("Over EV", f"{goal_ev['ev_over']:+.1%}")
+            # --- SUB-TAB 1: 全場大小球 ---
+            with tab_g_total:
+                prob_u_eff = goal_ev.get("prob_under_eff", goal_ev.get("prob_under", 0.0))
+                prob_o_eff = goal_ev.get("prob_over_eff", goal_ev.get("prob_over", 0.0))
 
-            st.divider()
+                gp1, gp2, gp3, gp4 = st.columns(4)
+                gp1.metric("Under Eff Prob", f"{prob_u_eff:.1%}")
+                gp2.metric("Under EV", f"{goal_ev['ev_under']:+.1%}")
+                gp3.metric("Over Eff Prob", f"{prob_o_eff:.1%}")
+                gp4.metric("Over EV", f"{goal_ev['ev_over']:+.1%}")
 
-            # 4. 訊號卡片與條款檢查
-            gu_sig = goal_signals["under_signal"]
-            go_sig = goal_signals["over_signal"]
+                st.divider()
 
-            if "GOAL SNIPER UNDER" in gu_sig:
-                st.markdown(f'<div class="signal-box-green"><p class="signal-title">{gu_sig}</p></div>', unsafe_allow_html=True)
-            elif "⛔" in gu_sig:
-                st.markdown(f'<div class="signal-box-red"><p class="signal-title">{gu_sig}</p></div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="signal-box-gray"><p class="signal-title">{gu_sig}</p></div>', unsafe_allow_html=True)
+                gu_sig = goal_signals["under_signal"]
+                go_sig = goal_signals["over_signal"]
 
-            if "GOAL SNIPER OVER" in go_sig:
-                st.markdown(f'<div class="signal-box-green"><p class="signal-title">{go_sig}</p></div>', unsafe_allow_html=True)
-            elif "⛔" in go_sig:
-                st.markdown(f'<div class="signal-box-red"><p class="signal-title">{go_sig}</p></div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="signal-box-gray"><p class="signal-title">{go_sig}</p></div>', unsafe_allow_html=True)
+                if "GOAL SNIPER UNDER" in gu_sig:
+                    st.markdown(f'<div class="signal-box-green"><p class="signal-title">{gu_sig}</p></div>', unsafe_allow_html=True)
+                elif "⛔" in gu_sig:
+                    st.markdown(f'<div class="signal-box-red"><p class="signal-title">{gu_sig}</p></div>', unsafe_allow_html=True)
+                else:
+                    st.markdown(f'<div class="signal-box-gray"><p class="signal-title">{gu_sig}</p></div>', unsafe_allow_html=True)
 
-            if goal_signals["under_checks"] and league_tier != "NO_UNDER":
-                with st.expander("🔍 Goal Under Signal Qualification Breakdown"):
-                    for criterion, (passed, val) in goal_signals["under_checks"].items():
-                        icon = "✅" if passed else "❌"
-                        st.write(f"{icon} **{criterion}**: `{val}`")
+                if "GOAL SNIPER OVER" in go_sig:
+                    st.markdown(f'<div class="signal-box-green"><p class="signal-title">{go_sig}</p></div>', unsafe_allow_html=True)
+                elif "⛔" in go_sig:
+                    st.markdown(f'<div class="signal-box-red"><p class="signal-title">{go_sig}</p></div>', unsafe_allow_html=True)
+                else:
+                    st.markdown(f'<div class="signal-box-gray"><p class="signal-title">{go_sig}</p></div>', unsafe_allow_html=True)
 
-            if goal_signals["over_checks"]:
-                with st.expander("🔍 Goal Over Signal Qualification Breakdown"):
-                    for criterion, (passed, val) in goal_signals["over_checks"].items():
-                        icon = "✅" if passed else "❌"
-                        st.write(f"{icon} **{criterion}**: `{val}`")
+            # --- SUB-TAB 2: 單邊大小球 ---
+            with tab_g_team:
+                st.markdown("##### 🏠 主隊單邊入球 (Home Team Total)")
+                ht1, ht2, ht3, ht4 = st.columns(4)
+                ht1.metric("Under Prob", f"{home_team_ev.get('prob_under_eff', 0.0):.1%}")
+                ht2.metric("Under EV", f"{home_team_ev['ev_under']:+.1%}")
+                ht3.metric("Over Prob", f"{home_team_ev.get('prob_over_eff', 0.0):.1%}")
+                ht4.metric("Over EV", f"{home_team_ev['ev_over']:+.1%}")
+
+                # 渲染主隊訊號卡
+                for sig in [home_team_sig["under_signal"], home_team_sig["over_signal"]]:
+                    if "🔥" in sig:
+                        st.markdown(f'<div class="signal-box-green"><p class="signal-title">{sig}</p></div>', unsafe_allow_html=True)
+                    elif "⛔" in sig or "⚠️" in sig:
+                        st.markdown(f'<div class="signal-box-red"><p class="signal-title">{sig}</p></div>', unsafe_allow_html=True)
+
+                st.divider()
+
+                st.markdown("##### ✈️ 客隊單邊入球 (Away Team Total)")
+                at1, at2, at3, at4 = st.columns(4)
+                at1.metric("Under Prob", f"{away_team_ev.get('prob_under_eff', 0.0):.1%}")
+                at2.metric("Under EV", f"{away_team_ev['ev_under']:+.1%}")
+                at3.metric("Over Prob", f"{away_team_ev.get('prob_over_eff', 0.0):.1%}")
+                at4.metric("Over EV", f"{away_team_ev['ev_over']:+.1%}")
+
+                # 渲染客隊訊號卡
+                for sig in [away_team_sig["under_signal"], away_team_sig["over_signal"]]:
+                    if "🔥" in sig:
+                        st.markdown(f'<div class="signal-box-green"><p class="signal-title">{sig}</p></div>', unsafe_allow_html=True)
+                    elif "⛔" in sig or "⚠️" in sig:
+                        st.markdown(f'<div class="signal-box-red"><p class="signal-title">{sig}</p></div>', unsafe_allow_html=True)
+
+            # --- SUB-TAB 3: 下一隊入球 ---
+            with tab_g_next:
+                st.caption("競合 Poisson 過程 (Competing Poisson Process)：計算下一球勝率、+EV 與風險訊號")
+                ng1, ng2, ng3 = st.columns(3)
+                ng1.metric("🏠 Next Goal: Home", f"{next_goal_ev['prob_home']:.1%}", f"EV: {next_goal_ev['ev_home']:+.1%}")
+                ng2.metric("✈️️ Next Goal: Away", f"{next_goal_ev['prob_away']:.1%}", f"EV: {next_goal_ev['ev_away']:+.1%}")
+                ng3.metric("🛑 No Further Goal", f"{next_goal_ev['prob_no_goal']:.1%}", f"EV: {next_goal_ev['ev_no_goal']:+.1%}")
+
+                st.divider()
+
+                # 完整渲染所有狀態卡片 (含綠色 🔥、紅色 ⛔、黃色 ⚠️、灰色 💤)
+                for sig in [next_goal_sig["home_signal"], next_goal_sig["away_signal"], next_goal_sig["no_goal_signal"]]:
+                    if "🔥" in sig:
+                        st.markdown(f'<div class="signal-box-green"><p class="signal-title">{sig}</p></div>', unsafe_allow_html=True)
+                    elif "⛔" in sig or "⚠️" in sig:
+                        st.markdown(f'<div class="signal-box-red"><p class="signal-title">{sig}</p></div>', unsafe_allow_html=True)
+                    else:
+                        st.markdown(f'<div class="signal-box-gray"><p class="signal-title">{sig}</p></div>', unsafe_allow_html=True)         
 # -----------------------------------------------------------------------------
 # 4. Tab 2: Documentation & Rule References
 # -----------------------------------------------------------------------------

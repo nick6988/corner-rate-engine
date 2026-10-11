@@ -341,6 +341,7 @@ with tab_live:
     heat_h, heat_a, fault_h, fault_a = goal_eng.get_goal_heat(
         time_t=time_t,
         use_advanced=use_advanced,
+        home_goals=home_goals, away_goals=away_goals,
         home_xg=home_xg, away_xg=away_xg,
         home_xgot=home_xgot, away_xgot=away_xgot,
         home_shots=home_shots, away_shots=away_shots,

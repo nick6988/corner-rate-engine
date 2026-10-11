@@ -43,6 +43,8 @@ class GoalEngine:
         self,
         time_t: float,
         use_advanced: bool,
+        home_goals: int = 0,
+        away_goals: int = 0,
         home_xg: float = 0.0,
         away_xg: float = 0.0,
         home_xgot: float = 0.0,
@@ -89,12 +91,14 @@ class GoalEngine:
 
             # Independent Conversion Fault Gates (High xG, broken xGOT)
             if home_xg >= 0.80 and (home_xgot / home_xg if home_xg > 0 else 1.0) < 0.35:
-                raw_heat_h *= 0.75
-                fault_h = True
+                if home_goals >= away_goals:  # 僅在平局或領先時懲罰
+                    raw_heat_h *= 0.75
+                    fault_h = True
 
             if away_xg >= 0.80 and (away_xgot / away_xg if away_xg > 0 else 1.0) < 0.35:
-                raw_heat_a *= 0.75
-                fault_a = True
+                if away_goals >= home_goals:  # 僅在平局或領先時懲罰
+                    raw_heat_a *= 0.75
+                    fault_a = True
 
         else:
             # 2. Proxy Mode (SoT, Shots, DA)
@@ -117,8 +121,8 @@ class GoalEngine:
         # 放寬極端熱度上限
         max_heat_limit = 1.85 if (use_advanced and (home_xg >= 2.50 or away_xg >= 2.50)) else 1.50
 
-        bounded_h = min(max_heat_limit, max(0.50, raw_heat_h))
-        bounded_a = min(max_heat_limit, max(0.50, raw_heat_a))
+        bounded_h = min(max_heat_limit, max(0.68, raw_heat_h))
+        bounded_a = min(max_heat_limit, max(0.68, raw_heat_a))
 
         # Bayesian Compound Weighting with elapsed time
         compound_h = (1.0 - elapsed_ratio) * 1.0 + elapsed_ratio * bounded_h
@@ -211,7 +215,7 @@ class GoalEngine:
         if time_t >= 90:
             return {"lambda_rem": 0.0, "lambda_home_rem": 0.0, "lambda_away_rem": 0.0}
 
-        time_decay = (max(0.0, 90.0 - time_t) / 90.0) ** 0.88
+        time_decay = (max(0.0, 90.0 - time_t) / 90.0) ** 1.08
         score_mod_h, score_mod_a = self.get_score_modifiers(time_t, home_goals, away_goals, heat_h, heat_a)
         red_mod_h, red_mod_a = self.get_red_card_modifiers(red_card_status)
 

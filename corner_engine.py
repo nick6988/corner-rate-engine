@@ -249,7 +249,7 @@ class CornerEngine:
         weighted_momentum = (elapsed_ratio * composite_momentum) + (1.0 - elapsed_ratio)
 
         raw_total_mod = weighted_momentum * shot_heat * score_mod * red_card_mod
-        total_mod = max(0.50, min(1.65, raw_total_mod))
+        total_mod = max(0.50, min(1.5, raw_total_mod))
 
         lambda_rem = (
             self.adjusted_pre_line * time_decay * total_mod

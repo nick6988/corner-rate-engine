@@ -85,9 +85,9 @@ class GoalEngine:
             rate_xg_a = (away_xg / exp_xg_a) if exp_xg_a > 0 else 1.0
             rate_xgot_a = (away_xgot / exp_xgot_a) if exp_xgot_a > 0 else 1.0
 
-            # 體積加權 60% + 質量加權 40%
-            raw_heat_h = (0.60 * rate_xg_h) + (0.40 * rate_xgot_h)
-            raw_heat_a = (0.60 * rate_xg_a) + (0.40 * rate_xgot_a)
+            # 體積加權 70% + 質量加權 30%
+            raw_heat_h = (0.70 * rate_xg_h) + (0.30 * rate_xgot_h)
+            raw_heat_a = (0.70 * rate_xg_a) + (0.30 * rate_xgot_a)
 
             # Independent Conversion Fault Gates (High xG, broken xGOT)
             if home_xg >= 0.80 and (home_xgot / home_xg if home_xg > 0 else 1.0) < 0.35:
@@ -117,12 +117,15 @@ class GoalEngine:
             raw_heat_a = (0.50 * r_sot_a) + (0.30 * r_s_a) + (0.20 * r_da_a)
 
 
-        # Apply bounds without premature rounding
-        # 放寬極端熱度上限
-        max_heat_limit = 1.85 if (use_advanced and (home_xg >= 2.50 or away_xg >= 2.50)) else 1.50
+        # 3. Bounded Heat (Hard Caps)
+        max_heat_h = 1.75 if use_advanced else 1.50
+        max_heat_a = 1.75 if use_advanced else 1.50
 
-        bounded_h = min(max_heat_limit, max(0.68, raw_heat_h))
-        bounded_a = min(max_heat_limit, max(0.68, raw_heat_a))
+        bounded_h = min(max_heat_h, max(0.68, raw_heat_h))
+        bounded_a = min(max_heat_a, max(0.68, raw_heat_a))
+
+        bounded_h = min(max_heat_h, max(0.68, raw_heat_h))
+        bounded_a = min(max_heat_a, max(0.68, raw_heat_a))
 
         # Bayesian Compound Weighting with elapsed time
         compound_h = (1.0 - elapsed_ratio) * 1.0 + elapsed_ratio * bounded_h
@@ -157,13 +160,15 @@ class GoalEngine:
 
         # 4. Favorite Leading by 1+ Goals (Game cools down slightly)
         if self.asian_handicap <= -0.75 and goal_diff >= 1:
-            return 0.85, 1.10  # Home controls tempo, Away forced to push
+            return 0.95, 1.10  # Home controls tempo, Away forced to push
         if self.asian_handicap >= 0.75 and goal_diff <= -1:
-            return 1.10, 0.85  # Home forced to push, Away controls tempo
+            return 1.10, 0.95  # Home forced to push, Away controls tempo
 
         # 5. Late-Game Tight Draw (T >= 75 and score tied)
         if time_t >= 75 and goal_diff == 0:
-            return 0.90, 0.90
+            if max(heat_h, heat_a) < 1.10:
+                return 0.95, 0.95
+            return 1.00, 1.00
 
         return 1.00, 1.00
 
